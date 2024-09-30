@@ -24,7 +24,6 @@ objects:
   - delivery_parties[i].lawyer: ALIndividual
   - court_list: ALCourtLoader.using(file_name='docassemble.ILAO:data/sources/il_courts.xlsx')
 ---
-#Add the easy form url once created!
 code: |
   ilao_easy_form_title = "Remove eviction from public record"
   ilao_easy_form_url = "https://www.illinoislegalaid.org/legal-information/remove-eviction-public-record"
@@ -562,6 +561,29 @@ fields:
 ---
 depends on:
   - trial_court_index
+code: |
+  if trial_court_index == -1:
+    trial_court = court_list.as_court('trial_court', 15)
+    trial_court.address.county = "Cook"
+  else:
+    trial_court = court_list.as_court('trial_court', trial_court_index)
+---
+code: |
+  trial_court_index
+  filing_county = trial_court.address.county
+---
+code: |
+  def court_county_lookup(lowercase=False):
+    all_court_counties = court_list._load_courts()['address_county'].items()
+    filtered_courts = [(-1, "cook")] if lowercase else [(-1, "Cook")]
+    for court in all_court_counties:
+      if court[1] != "Cook":
+        court_name = court[1].lower() if lowercase else court[1]
+        filtered_courts.append((court[0],court_name))
+    return sorted( filtered_courts, key=lambda y: y[1])
+---
+depends on:
+  - trial_court_index
   - cook_district
 code: |
   if trial_court_index == -1:
@@ -608,6 +630,7 @@ subquestion: |
   ${ collapse_template(case_number_help) }  
 fields:
   - Case number: case_number
+    maxlength: 19
 ---
 template: case_number_help
 subject: |
@@ -751,17 +774,12 @@ subquestion: |
 id: trial court county
 continue button field: case_county
 question: |
-  In which county was the *Eviction Complaint* filed?
+  In which county was the *Eviction Order* entered?
 fields:
   - no label: trial_court_index
     datatype: integer
     code: |
-      ilao_court_county_lookup(court_list)
-validation code: |
-  if trial_court_index == "-1":
-    trial_court = court_list.as_court('trial_court', 15)
-  else:
-    trial_court = court_list.as_court('trial_court', trial_court_index)
+      court_county_lookup()
 ---
 id: your contact information
 question: |
@@ -1714,6 +1732,24 @@ review:
       % else:
       Landlord
       % endif
+  - Edit: users.revisit
+    button: |
+      **Your party: (Edit to change name, lawyer, address, and delivery info)**
+
+      % for my_var in users:
+        * ${ my_var.name.full(middle="full") }
+      % endfor
+  - Edit: other_parties.revisit
+    button: |
+      **The other party: (Edit to change name, lawyer, address, and delivery info)**
+
+      % for my_var in other_parties:
+        * ${ my_var.name.full(middle="full") }
+      % endfor
+  - Edit: unknown_occupants_check
+    button: |
+      **Was the Unknown Occupants box checked on the Eviction Complaint?**
+      ${word(yesno(unknown_occupants_check))} 
   - Edit: 
       - trial_court_index
       - recompute:
@@ -1742,24 +1778,6 @@ review:
     button: |
       **What is the case number?**
       ${case_number}
-  - Edit: users.revisit
-    button: |
-      **Your party: (Edit to change name, lawyer, address, and delivery info)**
-
-      % for my_var in users:
-        * ${ my_var.name.full(middle="full") }
-      % endfor
-  - Edit: other_parties.revisit
-    button: |
-      **The other party: (Edit to change name, lawyer, address, and delivery info)**
-
-      % for my_var in other_parties:
-        * ${ my_var.name.full(middle="full") }
-      % endfor
-  - Edit: unknown_occupants_check
-    button: |
-      **Was the Unknown Occupants box checked on the Eviction Complaint?**
-      ${word(yesno(unknown_occupants_check))} 
 ---
 section: Motion details
 id: motion review screen
@@ -2044,6 +2062,24 @@ review:
       Landlord
       % endif
       
+  - Edit: users.revisit
+    button: |
+      **Your party: (Edit to change name, lawyer, address, and delivery info)**
+
+      % for my_var in users:
+        * ${ my_var.name.full(middle="full") }
+      % endfor
+  - Edit: other_parties.revisit
+    button: |
+      **The other party: (Edit to change name, lawyer, address, and delivery info)**
+
+      % for my_var in other_parties:
+        * ${ my_var.name.full(middle="full") }
+      % endfor
+  - Edit: unknown_occupants_check
+    button: |
+      **Was the Unknown Occupants box checked on the Eviction Complaint?**
+      ${word(yesno(unknown_occupants_check))}
   - Edit: 
       - trial_court_index
       - recompute:
@@ -2072,24 +2108,6 @@ review:
     button: |
       **What is the case number?**
       ${case_number}
-  - Edit: users.revisit
-    button: |
-      **Your party: (Edit to change name, lawyer, address, and delivery info)**
-
-      % for my_var in users:
-        * ${ my_var.name.full(middle="full") }
-      % endfor
-  - Edit: other_parties.revisit
-    button: |
-      **The other party: (Edit to change name, lawyer, address, and delivery info)**
-
-      % for my_var in other_parties:
-        * ${ my_var.name.full(middle="full") }
-      % endfor
-  - Edit: unknown_occupants_check
-    button: |
-      **Was the Unknown Occupants box checked on the Eviction Complaint?**
-      ${word(yesno(unknown_occupants_check))}
   - Edit: contacted_others
     button: |
       **Have you contacted the other parties about removing the eviction from the public record?**
