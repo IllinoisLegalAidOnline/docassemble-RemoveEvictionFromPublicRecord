@@ -1762,7 +1762,11 @@ review:
   - Edit: courtroom
     button: |
       **Courtroom:**
+      % if courtroom != "":
       ${ courtroom }
+      % else:
+      None entered
+      % endif
   - Edit: remote_website
     button: |
       **Video conference website (URL):**
@@ -2069,7 +2073,11 @@ review:
   - Edit: courtroom
     button: |
       **Courtroom:**
+      % if courtroom != "":
       ${ courtroom }
+      % else:
+      None entered
+      % endif
   - Edit: remote_website
     button: |
       **Video conference website (URL):**
