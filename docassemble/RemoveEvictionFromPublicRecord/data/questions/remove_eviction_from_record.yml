@@ -1,7 +1,7 @@
 metadata:
   title: Remove eviction from public record
   short title: Remove eviction from record
-  comment: This program helps you ask a judge to remove an eviction court file from the public record so it does not show up in a background check or credit report.
+  comment: This Easy Form helps you ask a judge to remove an eviction court file from the public record so it does not show up in a background check or credit report.
   authors:
     - Vivian McNaughton
     - Matt Newsted
@@ -22,7 +22,7 @@ objects:
   - filing: ALAddress
   - delivery_parties: ALPeopleList.using(there_are_any=True)
   - delivery_parties[i].lawyer: ALIndividual
-  - court_list: ALCourtLoader.using(file_name='docassemble.ILAO:data/sources/il_courts.xlsx')
+  - court_list: ALCourtLoader.using(file_name='docassemble.ILAO:data/sources/il_courts_plus.xlsx')
 ---
 code: |
   ilao_easy_form_title = "Remove eviction from public record"
@@ -62,6 +62,8 @@ code: |
 
   if trial_court_index == -1:
     cook_district
+  elif trial_court_index == -2:
+    kane_district
   courthouse_info
   case_number
   
@@ -81,8 +83,7 @@ code: |
   #notice_intro
   if has_court_date:
     hearing_date
-  attend_court
-  courthouse_info  
+  attend_court  
   seal_or_impound_info
     
   nav.set_section('section_delivery')
@@ -155,7 +156,7 @@ subquestion: |
   
   This program helps you ask a judge to remove an eviction court file from the public record so it does not show up in a background check or credit report. This program makes a *Motion to Remove Eviction Court File from Public Record*.
   
-  To learn more, read ILAO's article, [**What happens if I have an eviction on my record?**](https://www.illinoislegalaid.org/legal-information/what-happens-if-i-have-eviction-my-record)
+  To learn more, see ILAO's article, [**What happens if I have an eviction on my record?**](https://www.illinoislegalaid.org/node/31041)
 field: sees_nav_bar
 ---
 id: instructions
@@ -559,25 +560,12 @@ fields:
   - "Anyone else?": other_parties.there_is_another
     datatype: yesnoradio
 ---
-depends on:
-  - trial_court_index
-code: |
-  if trial_court_index == -1:
-    trial_court = court_list.as_court('trial_court', 15)
-    trial_court.address.county = "Cook"
-  else:
-    trial_court = court_list.as_court('trial_court', trial_court_index)
----
-code: |
-  trial_court_index
-  filing_county = trial_court.address.county
----
 code: |
   def court_county_lookup(lowercase=False):
     all_court_counties = court_list._load_courts()['address_county'].items()
-    filtered_courts = [(-1, "cook")] if lowercase else [(-1, "Cook")]
+    filtered_courts = [(-1, "cook"), (-2, "kane")] if lowercase else [(-1, "Cook"), (-2, "Kane")]
     for court in all_court_counties:
-      if court[1] != "Cook":
+      if court[1] != "Cook" and court[1] != "Kane":
         court_name = court[1].lower() if lowercase else court[1]
         filtered_courts.append((court[0],court_name))
     return sorted( filtered_courts, key=lambda y: y[1])
@@ -585,9 +573,14 @@ code: |
 depends on:
   - trial_court_index
   - cook_district
+  - kane_district
 code: |
   if trial_court_index == -1:
-    trial_court = court_list.as_court('trial_court', cook_district)
+    trial_court = court_list.as_court('trial_court', int(cook_district))
+
+  elif trial_court_index == -2:
+    trial_court = court_list.as_court('trial_court', int(kane_district))
+  
   else:
     trial_court = court_list.as_court('trial_court', trial_court_index)
     
@@ -596,7 +589,7 @@ code: |
   court_city = str(trial_court.address.city)
   court_state = str(trial_court.address.state)
   court_zip = str(trial_court.address.zip)
-  courthouse_info = court_name + ", " + court_street_address + ", " + court_city + ", " + court_state + " " + court_zip
+  courthouse_info = court_name + ", " + court_street_address + ", " + court_city + ", " + court_state
 ---
 id: Cook County district
 question: |
@@ -618,7 +611,34 @@ template: cook_district_help
 subject: |
   **What if I am not sure?**
 content: |  
-  Visit **[Illinois Court Help](https://www.ilcourthelp.gov/)**, or you can call or text (833) 411-1121 for assistance.
+  For assistance you can contact Illinois Court Help:
+
+  * **[Visit the Illinois Court Help website :external-link:](https://www.ilcourthelp.gov/)**,
+  * <a href="tel:833-411-1121">**Call (833) 411-1121 :phone:**</a>, or
+  * <a href="sms:833-411-1121">**Text (833) 411-1121 :comment:**</a>.
+---
+id: Kane County district
+question: |
+  In which Kane County courthouse is your case?
+subquestion: |
+  This information should be found near the top of your court papers.
+
+  ${ collapse_template(kane_district_help) }  
+field: kane_district
+choices:
+  - Kane County Courthouse, 100 S. 3rd Street, Geneva: 52
+  - Kane County Judicial Center, 37W777 Route 38, St. Charles: 53
+  - Kane County Juvenile Justice Center, 37W655 Route 38, St. Charles: 54
+---
+template: kane_district_help
+subject: |
+  **What if I am not sure?**
+content: |  
+  For assistance you can contact Illinois Court Help:
+
+  * **[Visit the Illinois Court Help website :external-link:](https://www.ilcourthelp.gov/)**,
+  * <a href="tel:833-411-1121">**Call (833) 411-1121 :phone:**</a>, or
+  * <a href="sms:833-411-1121">**Text (833) 411-1121 :comment:**</a>.
 ---
 id: case number
 question: |
@@ -635,7 +655,7 @@ subject: |
 content: |  
   The case number should be on your court papers. Look at the Complaint or Eviction Order, or the Summons if you received one. It is usually in the top-right part of the first page.
 
-  The court clerk can help you find your case number if you do not have your court papers. To learn more, read ILAO's article on [how to get copies of your court records](https://www.illinoislegalaid.org/legal-information/how-get-copies-your-court-records).
+  The court clerk can help you find your case number if you do not have your court papers. To learn more, see ILAO's article on [**how to access court records FAQ**](https://www.illinoislegalaid.org/node/33186).
   
   In this example, the case number is **2022 EXAMPLE 123**.
   
@@ -773,7 +793,7 @@ continue button field: case_county
 question: |
   In which county was the *Eviction Order* entered?
 fields:
-  - no label: trial_court_index
+  - County: trial_court_index
     datatype: integer
     code: |
       court_county_lookup()
@@ -1022,13 +1042,16 @@ fields:
       variable: users[i].jail_delivery
       is: True
     required: False
-
 ---
 template: efiling_help
 subject: |
-  **What if I need help?**
+  **What if I need help sending my forms electronically?**
 content: |  
-  If you need help delivering by email or using the e-filing service provider, you can visit a [**Legal Self-Help Center**](https://www.illinoislegalaid.org/get-legal-help/lshc-directory) or you can call or text [**Illinois Court Help**](https://www.ilcourthelp.gov) at 833-411-1121.
+  If you need help delivering by email or using the e-filing system, you can visit a [**Legal Self-Help Center :external-link:**](https://www.illinoislegalaid.org/get-legal-help/lshc-directory). You can also contact Illinois Court Help:
+
+  * **[Visit the Illinois Court Help website :external-link:](https://www.ilcourthelp.gov/)**,
+  * <a href="tel:833-411-1121">**Call (833) 411-1121 :phone:**</a>, or
+  * <a href="sms:833-411-1121">**Text (833) 411-1121 :comment:**</a>.
 ---
 id: other party delivery method
 # generic object: ALIndividual
@@ -1631,23 +1654,44 @@ review:
     button: |
       **County where the *Eviction Order* was entered:**
       ${ trial_court.address.county }
-  - Edit: cook_district
+  - Edit: 
+      - cook_district
+      - recompute:
+        - trial_court
     button: |
-      **In which Cook County courthouse is your case?**
+      **Cook County courthouse:**
       % if cook_district == "15":
-      First Municipal District, Daley Center, 50 W. Washington Street, Chicago
+      ${ "Daley Center, 50 W. Washington Street, Chicago" }
       % elif cook_district == "16":
-      Second Municipal District, 5600 Old Orchard Road, Skokie
+      ${ "Second Municipal District, 5600 Old Orchard Road, Skokie" }
       % elif cook_district == "17":
-      Third Municipal District, 2121 Euclid Avenue, Rolling Meadows
+      ${ "Third Municipal District, 2121 Euclid Avenue, Rolling Meadows" }
       % elif cook_district == "18":
-      Fourth Municipal District, 1500 Maybrook Drive, Maywood
+      ${ "Fourth Municipal District, 1500 Maybrook Drive, Maywood" }
       % elif cook_district == "19":
-      Fifth Municipal District, 10220 S. 76th Avenue, Bridgeview
+      ${ "Fifth Municipal District, 10220 S. 76th Avenue, Bridgeview" }
       % elif cook_district == "20":
-      Sixth Municipal District, 16501 South Kedzie Parkway, Markham
+      ${ "Sixth Municipal District, 16501 South Kedzie Parkway, Markham" }
+      % else:
+      No courthouse selected
       % endif
-    show if: trial_court_index == -1 
+    show if: trial_court_index == -1
+  - Edit:
+      - kane_district
+      - recompute:
+        - trial_court
+    button: |
+      **Kane County courthouse:**
+      % if kane_district == "52":
+      ${ "Kane County Courthouse, 100 S. 3rd Street, Geneva" }
+      % elif kane_district == "53":
+      ${ "Kane County Judicial Center, 37W777 Route 38, St. Charles" }
+      % elif kane_district == "54":
+      ${ "Kane County Juvenile Justice Center, 37W655 Route 38, St. Charles" }
+      % else:
+      No courthouse selected
+      % endif
+    show if: trial_court_index == -2
   - Edit: case_number
     button: |
       **What is the case number?**
@@ -1965,23 +2009,44 @@ review:
     button: |
       **County where the *Eviction Order* was entered:**
       ${ trial_court.address.county }
-  - Edit: cook_district
+  - Edit: 
+      - cook_district
+      - recompute:
+        - trial_court
     button: |
-      **In which Cook County courthouse is your case?**
+      **Cook County courthouse:**
       % if cook_district == "15":
-      First Municipal District, Daley Center, 50 W. Washington Street, Chicago
+      ${ "Daley Center, 50 W. Washington Street, Chicago" }
       % elif cook_district == "16":
-      Second Municipal District, 5600 Old Orchard Road, Skokie
+      ${ "Second Municipal District, 5600 Old Orchard Road, Skokie" }
       % elif cook_district == "17":
-      Third Municipal District, 2121 Euclid Avenue, Rolling Meadows
+      ${ "Third Municipal District, 2121 Euclid Avenue, Rolling Meadows" }
       % elif cook_district == "18":
-      Fourth Municipal District, 1500 Maybrook Drive, Maywood
+      ${ "Fourth Municipal District, 1500 Maybrook Drive, Maywood" }
       % elif cook_district == "19":
-      Fifth Municipal District, 10220 S. 76th Avenue, Bridgeview
+      ${ "Fifth Municipal District, 10220 S. 76th Avenue, Bridgeview" }
       % elif cook_district == "20":
-      Sixth Municipal District, 16501 South Kedzie Parkway, Markham
+      ${ "Sixth Municipal District, 16501 South Kedzie Parkway, Markham" }
+      % else:
+      No courthouse selected
       % endif
-    show if: trial_court_index == -1 
+    show if: trial_court_index == -1
+  - Edit:
+      - kane_district
+      - recompute:
+        - trial_court
+    button: |
+      **Kane County courthouse:**
+      % if kane_district == "52":
+      ${ "Kane County Courthouse, 100 S. 3rd Street, Geneva" }
+      % elif kane_district == "53":
+      ${ "Kane County Judicial Center, 37W777 Route 38, St. Charles" }
+      % elif kane_district == "54":
+      ${ "Kane County Juvenile Justice Center, 37W655 Route 38, St. Charles" }
+      % else:
+      No courthouse selected
+      % endif
+    show if: trial_court_index == -2
   - Edit: case_number
     button: |
       **What is the case number?**
